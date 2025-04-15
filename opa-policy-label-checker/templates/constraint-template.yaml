@@ -1,36 +1,36 @@
 apiVersion: templates.gatekeeper.sh/v1beta1
 kind: ConstraintTemplate
 metadata:
-  name: k8scsilabelmatchnamespace
+  name: k8srequiredlabelmatchnamespace
 spec:
   crd:
     spec:
       names:
-        kind: K8sCsiLabelMatchNamespace
+        kind: K8sRequiredLabelMatchNamespace
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
-        package k8scsilabelmatchnamespace
+        package k8srequiredlabelmatchnamespace
 
-        csi_label := "csi"
+        required_label := "someLabel"
 
         resource_labels := object.get(input.review.object.metadata, "labels", {})
         ns_labels := object.get(input.review.namespace.metadata, "labels", {})
 
-        # 1. Resource is missing `labels` or `csi`
+        # 1. Resource is missing `labels` or `someLabel`
         violation[{"msg": msg}] {
-          not resource_labels["csi"]
-          msg := "Missing 'csi' label on the resource"
+          not resource_labels["someLabel"]
+          msg := "Missing 'someLabel' label on the resource"
         }
 
-        # 2. Namespace is missing `labels` or `csi`
+        # 2. Namespace is missing `labels` or `someLabel`
         violation[{"msg": msg}] {
-          not ns_labels[csi_label]
-          msg := sprintf("Missing 'csi' label on the namespace, namespace labels: %v", [ns_labels])
+          not ns_labels[required_label]
+          msg := sprintf("Missing 'someLabel' label on the namespace, namespace labels: %v", [ns_labels])
         }
 
-        # 3. Ensure `csi` label should match between resource and namespace
+        # 3. Ensure `someLabel` label should match between resource and namespace
         violation[{"msg": msg}] {
-          resource_labels[csi_label] != ns_labels[csi_label]
-          msg := sprintf("Mismatch 'csi' label between resource and namespace, resource labels: %v, namespace labels: %v", [resource_labels, ns_labels])
+          resource_labels[required_label] != ns_labels[required_label]
+          msg := sprintf("Mismatch 'someLabel' label between resource and namespace, resource labels: %v, namespace labels: %v", [resource_labels, ns_labels])
         }
