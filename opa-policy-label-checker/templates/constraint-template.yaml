@@ -1,0 +1,36 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8scsilabelmatchnamespace
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sCsiLabelMatchNamespace
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8scsilabelmatchnamespace
+
+        csi_label := "csi"
+
+        resource_labels := object.get(input.review.object.metadata, "labels", {})
+        ns_labels := object.get(input.review.namespace.metadata, "labels", {})
+
+        # 1. Resource is missing `labels` or `csi`
+        violation[{"msg": msg}] {
+          not resource_labels["csi"]
+          msg := "Missing 'csi' label on the resource"
+        }
+
+        # 2. Namespace is missing `labels` or `csi`
+        violation[{"msg": msg}] {
+          not ns_labels[csi_label]
+          msg := sprintf("Missing 'csi' label on the namespace, namespace labels: %v", [ns_labels])
+        }
+
+        # 3. Ensure `csi` label should match between resource and namespace
+        violation[{"msg": msg}] {
+          resource_labels[csi_label] != ns_labels[csi_label]
+          msg := sprintf("Mismatch 'csi' label between resource and namespace, resource labels: %v, namespace labels: %v", [resource_labels, ns_labels])
+        }
